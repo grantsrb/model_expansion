@@ -56,16 +56,16 @@ class Model(nn.Module):
             else:
                 h = Variable(next_h) # Free graph
 
+            self.optim.zero_grad()
             for j in range(len(x)):
                 seq, labels = x[j], y[j]
-                self.optim.zero_grad()
                 h, loss = self.step(h, seq, labels, RUnit)
                 if j == 0:
                     next_h = h.data.clone() # Forces GRU to do more than memorize the sequence
                 avg_loss += loss.data[0]
                 print(j,"/",len(x), "– Loss:", loss.data[0], end="\r")
-                self.optim.step()
             print("Step", i,"/", X.size(0), "– Avg Loss:", avg_loss/len(x))
+            self.optim.step()
 
             # Check for memory leaks
             gc.collect()
