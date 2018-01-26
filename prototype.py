@@ -7,18 +7,28 @@ import nltk.tokenize
 from utils import split_token
 from keras.utils.data_utils import get_file
 import model
+import sys
 
 # Hyperparameters
 seq_len = 30
-embedding_size1 = 20
-embedding_size2 = 30
+emb_size1 = 20
+emb_size2 = 30
 batch_size = 64
-core_epochs = 1
-expanded_epochs = 1
-combined_epochs = 1
-
+core_epochs = 10
+expanded_epochs = 10
+combined_epochs = 10
 lr = 0.01
-optimizer = "adam"
+
+if len(sys.argv) > 1:
+    for arg in sys.argv:
+        if "seq_len=" in arg: seq_len = int(str(arg[len("seq_len="):]))
+        if "emb_size1=" in arg: emb_size1 = int(str(arg[len("emb_size1="):]))
+        if "emb_size2=" in arg: emb_size2 = int(str(arg[len("emb_size2="):]))
+        if "core_epochs=" in arg: core_epochs = int(str(arg[len("core_epochs="):]))
+        if "expanded_epochs=" in arg: expanded_epochs = int(str(arg[len("expanded_epochs="):]))
+        if "combined_epochs=" in arg: combined_epochs = int(str(arg[len("combined_epochs="):]))
+        if "lr=" in arg: lr = float(str(arg[len("lr="):]))
+        
 
 
 # Get and prepare data
@@ -65,7 +75,7 @@ for story in stories:
     text1 += story
 
 
-net = model.Model(words1, embedding_size1, words2|words1, embedding_size2)
+net = model.Model(words1, emb_size1, words2|words1, emb_size2)
 
 if torch.cuda.is_available():
     print("Cuda enabled")
