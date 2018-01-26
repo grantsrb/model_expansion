@@ -28,9 +28,8 @@ class Model(nn.Module):
 
     def step(self, h, seq, labels, RUnit):
         h,output = RUnit.forward(h,Variable(seq))
-        loss = self.cross_entropy(output, Variable(labels))
-        loss.backward(retain_graph=True)
-        return h, loss
+        cost = self.cross_entropy(output, Variable(labels))
+        return h, cost
 
     def optimize(self, X, Y, RUnit):
         """
@@ -43,11 +42,10 @@ class Model(nn.Module):
         if torch.cuda.is_available():
             next_h = next_h.cuda()
 
-        loss = None 
         for i in range(X.size(0)):
             x,y = X[i], Y[i]
-            avg_loss = 0
-            del loss # Free graph
+            avg_cost = 0
+            loss = 0 
 
             if not self.stateful:
                 h = Variable(torch.zeros(len(x[0]), RUnit.state_size))
@@ -59,12 +57,14 @@ class Model(nn.Module):
             self.optim.zero_grad()
             for j in range(len(x)):
                 seq, labels = x[j], y[j]
-                h, loss = self.step(h, seq, labels, RUnit)
+                h, cost = self.step(h, seq, labels, RUnit)
+                loss += cost
                 if j == 0:
                     next_h = h.data.clone() # Forces GRU to do more than memorize the sequence
-                avg_loss += loss.data[0]
-                print(j,"/",len(x), "– Loss:", loss.data[0], end="\r")
-            print("Step", i,"/", X.size(0), "– Avg Loss:", avg_loss/len(x))
+                avg_cost += cost.data[0]
+                print(j, "/", len(x), "– Loss:", loss.data[0], end="\r")
+            print("Step", i,"/", X.size(0), "– Avg Loss:", avg_cost/len(x))
+            loss.backward()
             self.optim.step()
 
             # Check for memory leaks
