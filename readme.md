@@ -13,8 +13,12 @@ The final training alternates training between the _expanded_ network and _core_
 
 # Understanding the Code
 `prototype.py` is the main script that handles data preperation and initiates training.
+
 `model.py` is a class that handles the sepration of the two networks.
+
 `RecurrentUnit.py` is a class that wraps the recurrent model (in this case 2 stacked GRUs).
+
 `DoubleGRU.py` is a class that contains 2 GRUs stacked together.
+
 `utils.py` contians a single helper function for parsing the text files
 
