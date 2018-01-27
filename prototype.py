@@ -75,7 +75,7 @@ for story in stories:
     text1 += story
 
 
-net = model.Model(words1, emb_size1, words2|words1, emb_size2)
+net = model.Model(words1, emb_size1, words2|words1, emb_size2, seq_len=seq_len)
 
 if torch.cuda.is_available():
     print("Cuda enabled")

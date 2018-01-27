@@ -8,7 +8,7 @@ import resource
 import sys
 
 class Model(nn.Module):
-    def __init__(self, word_set1, emb_size1, word_set2, emb_size2, core_size=256, expanded_size=256, lr=0.001):
+    def __init__(self, word_set1, emb_size1, word_set2, emb_size2, core_size=256, expanded_size=256, lr=0.001, seq_len=30):
         super(Model, self).__init__()
 
         self.stateful = True # used to determine if h is persistent through entire epoch
@@ -19,9 +19,10 @@ class Model(nn.Module):
         self.emb_size2 = emb_size2
         self.core_size = core_size
         self.expanded_size = expanded_size
+        self.seq_len = seq_len
 
-        self.core = RecurrentUnit.RecurrentUnit(len(word_set1), emb_size1, core_size)
-        self.expanded = RecurrentUnit.RecurrentUnit(len(word_set2), emb_size2, expanded_size)
+        self.core = RecurrentUnit.RecurrentUnit(len(word_set1), emb_size1, core_size, seq_len)
+        self.expanded = RecurrentUnit.RecurrentUnit(len(word_set2), emb_size2, expanded_size, seq_len)
 
         self.cross_entropy = nn.CrossEntropyLoss()
         self.optim = optim.Adam(self.parameters(), lr=lr)
