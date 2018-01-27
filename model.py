@@ -85,25 +85,19 @@ class Model(nn.Module):
         for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
             exp_p.data[:core_p.data.size(0)] = core_p.data
 
-    def sync_core(self, average=False):
+    def sync_core(self, average=0.5):
         """
         Updates the core Recurrent Unit's embeddings and first few operations to match
         the expanded's parameters' data.
 
-        average - boolean denoting if core values should be averaged with their previous values
-                    during the sync.
+        average - float denoting extent to which core values should be averaged with their previous values
+                 during the sync. A average of 1 means 100% new values, an average of 0 means 100% old values.
         """
-        if average:
-            self.core.embeddings.data = (self.core.embeddings.data + self.expanded.embeddings.data[:self.core.n_words,:self.core.emb_size])/2
-            for core_p, exp_p in zip(self.core.entry_bnorm.parameters(), self.expanded.entry_bnorm.parameters()):
-                core_p.data = (core_p.data + exp_p.data[:core_p.data.size(0)])/2
-            self.core.entry.data = (self.core.entry.data + self.expanded.entry.data[:self.core.entry.size(0), :self.core.entry.size(1)])/2
-            for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
-                core_p.data = (core_p.data + exp_p.data[:core_p.data.size(0)])/2
-        else:
-            self.core.embeddings.data = self.expanded.embeddings.data[:self.core.n_words, :self.core.emb_size]
-            for core_p, exp_p in zip(self.core.entry_bnorm.parameters(), self.expanded.entry_bnorm.parameters()):
-                core_p.data = exp_p.data[:core_p.data.size(0)]
-            self.core.entry.data = self.expanded.entry.data[:self.core.entry.size(0), :self.core.entry.size(1)]
-            for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
-                core_p.data = exp_p.data[:core_p.data.size(0)]
+        
+        self.core.embeddings.data = (1-average)*self.core.embeddings.data + average*self.expanded.embeddings.data[:self.core.n_words,:self.core.emb_size]
+        for core_p, exp_p in zip(self.core.entry_bnorm.parameters(), self.expanded.entry_bnorm.parameters()):
+            core_p.data = (1-average)*core_p.data + average*exp_p.data[:core_p.data.size(0)]
+        self.core.entry.data = (1-average)*self.core.entry.data + average*self.expanded.entry.data[:self.core.entry.size(0), :self.core.entry.size(1)]
+        for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
+            core_p.data = (1-average)*core_p.data + average*exp_p.data[:core_p.data.size(0)]
+    
