@@ -41,7 +41,7 @@ class RecurrentUnit(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(-1)
 
     def forward(self, old_h, emb_idxs):
         """
@@ -72,10 +72,11 @@ class RecurrentUnit(nn.Module):
                 Ideally prepend a few '\0' characters to the seed.
         """
         
+        self.eval()
         # Build h
         h = Variable(torch.zeros(1,self.state_size))
         for i in range(len(seed)):
-            h, output = self.forward(Variable(h.data), Variable(seed[j:j+1]))
+            h, output = self.forward(Variable(h.data), Variable(seed[i:i+1]))
 
         # Generate Text
         generated_idxs = torch.zeros(seed.size(0)+generation_len).long()
@@ -83,9 +84,10 @@ class RecurrentUnit(nn.Module):
         _, new_idx = torch.max(self.softmax(output), 0)
         generated_idxs[seed.size(0)] = new_idx.data[0]
         for i in range(seed.size(0)+1,generated_idxs.size(0)):
-            h, output = self.forward(Variable(h.data), Variable(generated_text[i-1:i]))
+            h, output = self.forward(Variable(h.data), Variable(generated_idxs[i-1:i]))
             _, new_idx = torch.max(self.softmax(output),0)
             generated_idxs[i] = new_idx.data[0]
+        self.train(mode=True)
         return generated_idxs
         
     
