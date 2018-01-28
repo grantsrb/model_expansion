@@ -18,6 +18,9 @@ core_epochs = 10
 expanded_epochs = 10
 combined_epochs = 10
 lr = 0.01
+generation_len = 100
+save_file = "test_net.p"
+resume = False
 
 if len(sys.argv) > 1:
     for arg in sys.argv:
@@ -28,8 +31,21 @@ if len(sys.argv) > 1:
         if "expanded_epochs=" in arg: expanded_epochs = int(str(arg[len("expanded_epochs="):]))
         if "combined_epochs=" in arg: combined_epochs = int(str(arg[len("combined_epochs="):]))
         if "lr=" in arg: lr = float(str(arg[len("lr="):]))
-        
+        if "save_file=" in arg: save_file = str(arg[len("save_file="):])
+        if "generation_len=" in arg: generation_len = int(str(arg[len("generation_len="):]))
+        if "resume" in arg: resume=True
 
+print("seq_len:", seq_len)
+print("emb_size1:", emb_size1)
+print("emb_size2:", emb_size2)
+print("batch_size:", batch_size)
+print("core_epochs:", core_epochs)
+print("expanded_epochs:", expanded_epochs)
+print("combined_epochs:", combined_epochs)
+print("lr:", lr)
+print("generation_len:", generation_len)
+print("save_file:", save_file)
+print("resume:", resume)
 
 # Get and prepare data
 data_path1 = get_file('mc500.train.tsv', origin="https://raw.githubusercontent.com/mcobzarenco/mctest/master/data/MCTest/mc500.train.tsv")
@@ -112,10 +128,16 @@ print("Y2 shape:", list(Y2.size()))
 
 
 # Train core model
+seed1 = torch.LongTensor([word_to_idx[text1[i]] for i in range(seq_len+20)])
 print("Begin Core Training")
 for epoch in range(core_epochs):
     print("Begin Epoch", epoch)
     net.optimize(X1, Y1, net.core)
+    torch.save(net.state_dict(), save_file)
+    if generation_len > 0:
+        gen_idxs = net.core.generate_text(seed1, generation_len)
+        gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
+        print(" ".join(gen_text))
 
 # Train expanded model
 print("Begin Expanded Training")
@@ -123,6 +145,11 @@ for epoch in range(expanded_epochs):
     print("Begin Epoch", epoch)
     net.sync_expanded()
     net.optimize(X2, Y2, net.expanded)
+    torch.save(net.state_dict(), save_file)
+    if generation_len > 0:
+        gen_idxs = net.expanded.generate_text(seed1, generation_len)
+        gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
+        print(" ".join(gen_text))
 
 # Intermittently train core and expanded models
 print("Begin Combined Training")
@@ -130,7 +157,15 @@ for epoch in range(combined_epochs):
     print("Begin Epoch", epoch)
     net.sync_expanded()
     net.optimize(X2,Y2,net.expanded)
+    torch.save(net.state_dict(), save_file)
     net.sync_core(average=True)
+    if generation_len > 0:
+        gen_idxs = net.expanded.generate_text(seed1, generation_len)
+        gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
+        print(" ".join(gen_text))
     net.optimize(X1, Y1, net.core)
-
-
+    torch.save(net.state_dict(), save_file)
+    if generation_len > 0:
+        gen_idxs = net.core.generate_text(seed1, generation_len)
+        gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
+        print(" ".join(gen_text))
