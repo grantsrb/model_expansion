@@ -6,6 +6,7 @@ import RecurrentUnit
 import gc
 import resource
 import sys
+import numpy as np
 
 class Model(nn.Module):
     def __init__(self, word_set1, emb_size1, word_set2, emb_size2, core_size=256, expanded_size=256, lr=0.001, seq_len=30):
@@ -43,6 +44,7 @@ class Model(nn.Module):
         if torch.cuda.is_available():
             next_h = next_h.cuda()
 
+        cost_arr = np.zeros(X.size(0))
         for i in range(X.size(0)):
             x,y = X[i], Y[i]
             avg_cost = 0
@@ -56,23 +58,34 @@ class Model(nn.Module):
                 h = Variable(next_h) # Free graph
 
             self.optim.zero_grad()
+            batch_cost = 0
             for j in range(len(x)):
                 seq, labels = x[j], y[j]
                 h, cost = self.step(h, seq, labels, RUnit)
                 loss += cost
                 if j == 0:
                     next_h = h.data.clone() # Forces GRU to do more than memorize the sequence
-                avg_cost += cost.data[0]
-                print(j, "/", len(x), "– Loss:", loss.data[0], end="\r")
-            print("Step", i,"/", X.size(0), "– Avg Loss:", avg_cost/len(x))
+                batch_cost += cost.data[0]
+            cost_arr[i] = batch_cost/len(x)
+            if not torch.cuda.is_available():
+                print("Step", i,"/", X.size(0), "– Avg Loss:", batch_cost/len(x))
             loss.backward()
             self.optim.step()
+        RUnit.log.append(cost_arr)
 
-            # Check for memory leaks
-            gc.collect()
-            max_mem_used = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            print("Memory Used: {:.2f} units".format(max_mem_used / 1024))
-
+    def savetxt(self, txt, save_file, rnn_type, epoch):
+        """
+        Used to quickly save generated text from the RNNs to a file.
+        
+        txt - string of text
+        save_file - name of the file to append the txt to
+        rnn_type - string denoting the name of the rnn used to generate the text.
+                   Used as a header for the txt snippet.
+        epoch - string or integer denoting the epoch of training for the particular rnn
+        """
+        with open(save_file, 'a+') as f:
+            f.write("\n" + rnn_type + " –– Epoch: " + str(epoch) + "\n")
+            f.write(txt+"\n")
 
     def sync_expanded(self):
         """
