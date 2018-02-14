@@ -3,17 +3,24 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import DoubleGRU
+from rnn import DoubleGRU, NestedLSTM, LSTM
 
 
 class RecurrentUnit(nn.Module):
-    def __init__(self, n_words, emb_size, state_size=256, seq_len=30):
+    def __init__(self, n_words, emb_size, state_size=256, seq_len=30, rnn_type='nested_lstm'):
         super(RecurrentUnit, self).__init__()
+        """
+        rnn_type - Available arguments:
+                        nested_lstm
+                        lstm
+                        gru
+        """
 
         self.n_words = n_words
         self.emb_size = emb_size
         self.state_size = state_size
         self.seq_len = seq_len
+        self.rnn_type = rnn_type.lower()
 
         # Embedding Sets
         means = torch.zeros(n_words,emb_size)
@@ -23,9 +30,14 @@ class RecurrentUnit(nn.Module):
         self.entry_bnorm = nn.BatchNorm1d(emb_size)
         means = torch.zeros(emb_size, state_size)
         self.entry = nn.Parameter(torch.normal(means, std=1/float(np.sqrt(state_size))), requires_grad=True)
-        self.preGRU_bnorm = nn.BatchNorm1d(state_size)
+        self.pre_rnn_bnorm = nn.BatchNorm1d(state_size)
 
-        self.GRU = DoubleGRU.DoubleGRU(state_size)
+        if 'nested' in self.rnn_type:
+            self.rnn = NestedLSTM(state_size, state_size)
+        elif "lstm" in self.rnn_type:
+            self.rnn = LSTM(state_size, state_size)
+        else:
+            self.rnn = DoubleGRU(state_size)
 
         # Exit Parameters
         self.exit_bnorm = nn.BatchNorm1d(state_size)
@@ -46,7 +58,7 @@ class RecurrentUnit(nn.Module):
 
         self.log = [] # Used to track loss
 
-    def forward(self, old_h, emb_idxs):
+    def forward(self, state_variables, emb_idxs):
         """
         old_h - FloatTensor Variable with dimensions (batch_size, state_size)
         emb_idxs - LongTensor Variable with dimensions (batch_size,)
@@ -54,28 +66,28 @@ class RecurrentUnit(nn.Module):
 
         embeddings = self.embeddings[emb_idxs]
 
-        h, exit_x = self.subforward(old_h, embeddings)
+        state_variables, exit_x = self.subforward(state_variables, embeddings)
 
         output = self.classifier_bnorm(exit_x)
         output = exit_x.mm(self.classifier)
 
-        return h, output
+        return state_variables, output
 
-    def subforward(self, old_h, embeddings):
+    def subforward(self, state_variables, embeddings):
         """
         Helper function for forward
         """
 
         embeddings = self.entry_bnorm(embeddings)
         x = self.relu(embeddings.mm(self.entry))
-        x = self.preGRU_bnorm(x)
+        x = self.preRNN_bnorm(x)
 
-        h = self.GRU(old_h, x)
+        state_variables = self.rnn.forward(x, *state_variables)
 
-        exit_x = self.exit_bnorm(h)
+        exit_x = self.exit_bnorm(state_variables[0])
         exit_x = self.relu(exit_x.mm(self.exit))
 
-        return h, exit_x
+        return state_variables, exit_x
 
     def generate_text(self, seed, generation_len):
         """

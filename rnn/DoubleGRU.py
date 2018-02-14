@@ -50,7 +50,7 @@ class DoubleGRU(nn.Module):
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
 
-    def forward(self, old_h, x):
+    def forward(self, x, old_h):
         """
         old_h - running state of GRU. FloatTensor Variable with shape (batch_size, state_size)
         x - New data coming into GRU. FloatTensor Variable with shape (batch_size, state_size)
