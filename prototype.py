@@ -21,6 +21,7 @@ lr = 0.01
 generation_len = 100
 save_file = "test_net.p"
 resume = False
+debug = False
 
 if len(sys.argv) > 1:
     for arg in sys.argv:
@@ -33,7 +34,13 @@ if len(sys.argv) > 1:
         if "lr=" in arg: lr = float(str(arg[len("lr="):]))
         if "save_file=" in arg: save_file = str(arg[len("save_file="):])
         if "generation_len=" in arg: generation_len = int(str(arg[len("generation_len="):]))
-        if "resume" in arg: resume=True
+        if "resume" in arg and "False" not in arg: resume=True
+        if "debug" in arg and "False" not in arg: debug=True
+
+if debug:
+    core_epochs = 2
+    expanded_epochs = 2
+    combined_epochs = 2
 
 print("seq_len:", seq_len)
 print("emb_size1:", emb_size1)
@@ -109,6 +116,9 @@ Y1 = torch.LongTensor(Y1[:(len(X1)//batch_size)*batch_size])
 X1 = X1.view(batch_size, X1.size(0)//batch_size, seq_len).permute(1,2,0)
 Y1 = Y1.view(batch_size, Y1.size(0)//batch_size, seq_len).permute(1,2,0)
 
+if debug:
+    X1, Y1 = X1[:1], Y1[:1]
+
 assert len(X1) == len(Y1)
 print("X1 shape:", list(X1.size()))
 print("Y1 shape:", list(Y1.size()))
@@ -121,6 +131,9 @@ Y2 = torch.LongTensor(Y2[:(len(X2)//batch_size)*batch_size])
 
 X2 = X2.view(batch_size, X2.size(0)//batch_size, seq_len).permute(1,2,0)
 Y2 = Y2.view(batch_size, Y2.size(0)//batch_size, seq_len).permute(1,2,0)
+
+if debug:
+    X2, Y2 = X2[:1], Y2[:1]
 
 assert len(X2) == len(Y2)
 print("X2 shape:", list(X2.size()))
@@ -137,7 +150,11 @@ for epoch in range(core_epochs):
     if generation_len > 0:
         gen_idxs = net.core.generate_text(seed1, generation_len)
         gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-        print(" ".join(gen_text))
+        txt = " ".join(gen_text)
+        if not torch.cuda.is_available():
+            print(txt)
+        net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "core", epoch)
+net.core.flush_log(save_file[:-len(".p")]+"_core.csv")
 
 # Train expanded model
 print("Begin Expanded Training")
@@ -149,7 +166,11 @@ for epoch in range(expanded_epochs):
     if generation_len > 0:
         gen_idxs = net.expanded.generate_text(seed1, generation_len)
         gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-        print(" ".join(gen_text))
+        txt = " ".join(gen_text)
+        if not torch.cuda.is_available():
+            print(txt)
+        net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "expanded", epoch)
+net.expanded.flush_log(save_file[:-len(".p")]+"_expanded.csv")
 
 # Intermittently train core and expanded models
 print("Begin Combined Training")
@@ -162,10 +183,18 @@ for epoch in range(combined_epochs):
     if generation_len > 0:
         gen_idxs = net.expanded.generate_text(seed1, generation_len)
         gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-        print(" ".join(gen_text))
+        txt = " ".join(gen_text)
+        if not torch.cuda.is_available():
+            print(txt)
+        net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "expanded_combined", epoch)
     net.optimize(X1, Y1, net.core)
     torch.save(net.state_dict(), save_file)
     if generation_len > 0:
         gen_idxs = net.core.generate_text(seed1, generation_len)
         gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-        print(" ".join(gen_text))
+        txt = " ".join(gen_text)
+        if not torch.cuda.is_available():
+            print(txt)
+        net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "core_combined", epoch)
+net.core.flush_log(save_file[:-len(".p")]+"_combined_core.csv")
+net.expanded.flush_log(save_file[:-len(".p")]+"_combined_expanded.csv")

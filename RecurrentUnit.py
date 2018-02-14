@@ -44,6 +44,8 @@ class RecurrentUnit(nn.Module):
         self.mse = nn.MSELoss()
         self.softmax = nn.Softmax(-1)
 
+        self.log = [] # Used to track loss
+
     def forward(self, old_h, emb_idxs):
         """
         old_h - FloatTensor Variable with dimensions (batch_size, state_size)
@@ -153,3 +155,14 @@ class RecurrentUnit(nn.Module):
             if mse < smallest_mse:
                 emb_idx = i
         return emb_idx
+
+    def flush_log(self, save_file):
+        """
+        Used to flush data to save file after training finishes.
+        Writes the self.log array to a csv file.
+        
+        save_file - name of file to be saved to, should be a csv or txt file
+        """
+        
+        np_log = np.asarray(self.log)
+        np.savetxt(save_file, np_log, delimiter=",")
