@@ -31,9 +31,9 @@ to the quantity being calculated.
 
 """
 
-class LSTM(nn.Module):
+class NestedLSTM(nn.Module):
     def __init__(self, state_size=256, nested_state_size=256):
-        super(LSTM, self).__init__()
+        super(NestedLSTM, self).__init__()
 
         self.state_size = state_size
         self.nested_state_size = nested_state_size
