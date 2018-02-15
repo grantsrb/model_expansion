@@ -162,7 +162,7 @@ class RecurrentUnit(nn.Module):
         tensor = tensor.squeeze()
         smallest_mse = torch.sum((tensor-self.embeddings.data[1])**2)
         emb_idx = 0
-        for i,emb in enumerate(self.embeddings.data[1:]: 
+        for i,emb in enumerate(self.embeddings.data[1:]): 
             mse = torch.sum((tensor-emb)**2)
             if mse < smallest_mse:
                 emb_idx = i
