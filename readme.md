@@ -18,7 +18,13 @@ The final training alternates training between the _expanded_ network and _core_
 
 `RecurrentUnit.py` is a class that wraps the recurrent model (in this case 2 stacked GRUs).
 
-`DoubleGRU.py` is a class that contains 2 GRUs stacked together.
+`rnn/` is a folder containing a few basic recurrent modules.
+
+`rnn/DoubleGRU.py` is a class that contains 2 GRUs stacked together.
+
+`rnn/LSTM.py` is a class that contains a single LSTM.
+
+`rnn/NestedLSTM.py` is a class that contains a (nested lstm)[https://arxiv.org/abs/1801.10308].
 
 `utils.py` contians a single helper function for parsing the text files
 
