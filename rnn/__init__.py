@@ -1,3 +1,3 @@
-from LSTM import LSTM
-from DoubleGRU import DoubleGRU
-from NestedLSTM import NestedLSTM
+from rnn.LSTM import LSTM
+from rnn.DoubleGRU import DoubleGRU
+from rnn.NestedLSTM import NestedLSTM
