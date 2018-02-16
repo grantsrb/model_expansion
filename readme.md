@@ -26,5 +26,5 @@ The final training alternates training between the _expanded_ network and _core_
 
 `rnn/NestedLSTM.py` is a class that contains a (nested lstm)[https://arxiv.org/abs/1801.10308].
 
-`utils.py` contians a single helper function for parsing the text files
+`tokenizer.py` contians a helper functions for parsing the text files
 
