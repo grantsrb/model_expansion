@@ -3,7 +3,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import rnn.LSTM
+import rnn.LSTM as LSTM
 
 """
 Nested LSTM units are very similar to LSTMs but use a nested LSTM for the c term.
