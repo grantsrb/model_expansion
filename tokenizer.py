@@ -4,7 +4,7 @@ def tokenize(string):
         if char.isalnum() or char == " ":
             spaced_string += char
         else:
-            if spaced_string[-1] != " ":
+            if len(spaced_string) > 0 and spaced_string[-1] != " ":
                 spaced_string += " "
             spaced_string += char
             if i+1 < len(string) and not string[i+1].isspace():
