@@ -50,7 +50,7 @@ class NestedLSTM(nn.Module):
         self.b = nn.Parameter(torch.zeros(4,1,state_size), requires_grad=True)
 
         # Nested LSTM
-        self.LSTM = LSTM.LSTM(nested_state_size)
+        self.LSTM = LSTM(nested_state_size)
 
         # Non Linear Activation Functions
         self.sigmoid = nn.Sigmoid()

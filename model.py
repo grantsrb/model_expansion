@@ -46,12 +46,12 @@ class Model(nn.Module):
         RUnit - the RecurrentUnit to be trained (core or expanded)
         """
         
-        state_vars = [torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size))]
+        next_state_vars = [torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size))]
         if 'lstm' in RUnit.rnn_type:
-            state_vars.append(torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size)))
+            next_state_vars.append(torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size)))
         if 'nested' in RUnit.rnn_type:
-            state_vars.append(torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size)))
-
+            next_state_vars.append(torch.FloatTensor(torch.zeros(X.size(-1), RUnit.state_size)))
+        state_vars = [0]*len(next_state_vars)
         cost_arr = np.zeros(X.size(0))
         for i in range(X.size(0)):
             x,y = X[i], Y[i]
@@ -59,11 +59,11 @@ class Model(nn.Module):
             loss = 0 
 
             if not self.stateful:
-                for i in range(len(state_vars)):
-                    state_vars[i] = Variable(torch.FloatTensor(torch.zeros(len(x[0]), RUnit.state_size)))
+                for j in range(len(state_vars)):
+                    state_vars[j] = Variable(torch.FloatTensor(torch.zeros(len(x[0]), RUnit.state_size)))
             else:
-                for i in range(len(state_vars)):
-                    state_vars[i] = Variable(next_state_vars[i])
+                for j in range(len(state_vars)):
+                    state_vars[j] = Variable(next_state_vars[i])
 
             self.optim.zero_grad()
             batch_cost = 0
@@ -71,8 +71,9 @@ class Model(nn.Module):
                 seq, labels = x[j], y[j]
                 state_vars, cost = self.step(state_vars, seq, labels, RUnit)
                 loss += cost
-                if j == 0:
-                    next_state_vars = state_vars.data.clone() # Restricts RNN from memorizing the sequence
+                if j == 1:
+                    # Restricts RNN from memorizing the sequence
+                    next_state_vars = [state_var.data.clone() for state_var in state_vars] 
                 batch_cost += cost.data[0]
             cost_arr[i] = batch_cost/len(x)
             if not torch.cuda.is_available():
@@ -104,7 +105,7 @@ class Model(nn.Module):
         for core_p, exp_p in zip(self.core.entry_bnorm.parameters(), self.expanded.entry_bnorm.parameters()):
             exp_p.data[:core_p.data.size(0)] = core_p.data
         self.expanded.entry.data[:self.core.entry.size(0), :self.core.entry.size(1)] = self.core.entry.data
-        for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
+        for core_p, exp_p in zip(self.core.pre_rnn_bnorm.parameters(), self.expanded.pre_rnn_bnorm.parameters()):
             exp_p.data[:core_p.data.size(0)] = core_p.data
 
     def sync_core(self, average=0.5):
@@ -120,6 +121,6 @@ class Model(nn.Module):
         for core_p, exp_p in zip(self.core.entry_bnorm.parameters(), self.expanded.entry_bnorm.parameters()):
             core_p.data = (1-average)*core_p.data + average*exp_p.data[:core_p.data.size(0)]
         self.core.entry.data = (1-average)*self.core.entry.data + average*self.expanded.entry.data[:self.core.entry.size(0), :self.core.entry.size(1)]
-        for core_p, exp_p in zip(self.core.preGRU_bnorm.parameters(), self.expanded.preGRU_bnorm.parameters()):
+        for core_p, exp_p in zip(self.core.pre_rnn_bnorm.parameters(), self.expanded.pre_rnn_bnorm.parameters()):
             core_p.data = (1-average)*core_p.data + average*exp_p.data[:core_p.data.size(0)]
     

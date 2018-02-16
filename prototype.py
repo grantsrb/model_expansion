@@ -59,6 +59,7 @@ if __name__ == '__main__':
     print("rnn_type:", rnn_type)
     print("train_type:", train_type)
     print("save_file:", save_file)
+    print("debug:", debug)
     print("resume:", resume)
 
     # Get and prepare data
@@ -158,7 +159,7 @@ if __name__ == '__main__':
             if generation_len > 0:
                 gen_idxs = net.core.generate_text(seed1, generation_len)
                 gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-                txt = " ".join(gen_text)
+                txt = " ".join(gen_text)+"ENDTEXT"
                 if not torch.cuda.is_available():
                     print(txt)
                 net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "core", epoch)
@@ -170,13 +171,12 @@ if __name__ == '__main__':
         print("Begin Expanded Training")
         for epoch in range(expanded_epochs):
             print("Begin Epoch", epoch)
-            net.sync_expanded()
             net.optimize(X2, Y2, net.expanded)
             torch.save(net.state_dict(), save_file)
             if generation_len > 0:
                 gen_idxs = net.expanded.generate_text(seed1, generation_len)
                 gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-                txt = " ".join(gen_text)
+                txt = " ".join(gen_text)+"ENDTEXT"
                 if not torch.cuda.is_available():
                     print(txt)
                 net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "expanded", epoch)
@@ -204,7 +204,7 @@ if __name__ == '__main__':
             if generation_len > 0:
                 gen_idxs = net.core.generate_text(seed1, generation_len)
                 gen_text = [idx_to_word[idx] for idx in gen_idxs.tolist()]
-                txt = " ".join(gen_text)
+                txt = " ".join(gen_text)+"ENDTEXT"
                 if not torch.cuda.is_available():
                     print(txt)
                 net.savetxt(txt, save_file[:-len(".p")]+"_gentxt.txt", "core_combined", epoch)

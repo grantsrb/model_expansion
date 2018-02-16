@@ -58,36 +58,37 @@ class RecurrentUnit(nn.Module):
 
         self.log = [] # Used to track loss
 
-    def forward(self, state_variables, emb_idxs):
+    def forward(self, state_vars, emb_idxs):
         """
-        old_h - FloatTensor Variable with dimensions (batch_size, state_size)
+        state_vars - list of FloatTensor state Variables for the RNN 
+                          with dimensions (batch_size, state_size)
         emb_idxs - LongTensor Variable with dimensions (batch_size,)
         """
 
         embeddings = self.embeddings[emb_idxs]
 
-        state_variables, exit_x = self.subforward(state_variables, embeddings)
+        state_vars, exit_x = self.subforward(state_vars, embeddings)
 
         output = self.classifier_bnorm(exit_x)
         output = exit_x.mm(self.classifier)
 
-        return state_variables, output
+        return state_vars, output
 
-    def subforward(self, state_variables, embeddings):
+    def subforward(self, state_vars, embeddings):
         """
         Helper function for forward
         """
 
         embeddings = self.entry_bnorm(embeddings)
         x = self.relu(embeddings.mm(self.entry))
-        x = self.preRNN_bnorm(x)
+        x = self.pre_rnn_bnorm(x)
 
-        state_variables = self.rnn.forward(x, *state_variables)
+        state_vars = self.rnn.forward(x, *state_vars)
 
-        exit_x = self.exit_bnorm(state_variables[0])
+        exit_x = self.exit_bnorm(state_vars[0])
         exit_x = self.relu(exit_x.mm(self.exit))
 
-        return state_variables, exit_x
+        return state_vars, exit_x
 
     def generate_text(self, seed, generation_len):
         """
@@ -99,9 +100,14 @@ class RecurrentUnit(nn.Module):
         
         self.eval()
         # Build h
-        h = Variable(torch.zeros(1,self.state_size))
+        state_vars = [Variable(torch.zeros(1,self.state_size))]
+        if 'lstm' in self.rnn_type:
+            state_vars.append(Variable(torch.zeros(1,self.state_size)))
+        if 'nested' in self.rnn_type:
+            state_vars.append(Variable(torch.zeros(1,self.state_size)))
         for i in range(len(seed)):
-            h, output = self.forward(Variable(h.data), Variable(seed[i:i+1]))
+            state_vars, output = self.forward(state_vars, Variable(seed[i:i+1]))
+            state_vars = [Variable(var.data) for var in state_vars]
 
         # Generate Text
         generated_idxs = torch.zeros(seed.size(0)+generation_len).long()
@@ -109,7 +115,8 @@ class RecurrentUnit(nn.Module):
         _, new_idx = torch.max(self.softmax(output), 0)
         generated_idxs[seed.size(0)] = new_idx.data[0]
         for i in range(seed.size(0)+1,generated_idxs.size(0)):
-            h, output = self.forward(Variable(h.data), Variable(generated_idxs[i-1:i]))
+            state_vars, output = self.forward(state_vars, Variable(generated_idxs[i-1:i]))
+            state_vars = [Variable(var.data) for var in state_vars]
             _, new_idx = torch.max(self.softmax(output),0)
             generated_idxs[i] = new_idx.data[0]
         self.train(mode=True)
