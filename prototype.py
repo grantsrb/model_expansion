@@ -68,7 +68,7 @@ if __name__ == '__main__':
     data2 = open(data_path2, 'r')
     stories = []
     for story in data1:
-        tokens = tokenize.word_tokenize(story.split('\t')[2])
+        tokens = tokenize(story.split('\t')[2])
         words = []
         for token in tokens:
             if "\\" in token:
@@ -86,7 +86,7 @@ if __name__ == '__main__':
             words1.add(word)
     print("Num unique words data1:", len(words1))
 
-    text2 = tokenize.word_tokenize(data2.read())
+    text2 = tokenize(data2.read())
     words2 = set(text2)
     print("Num unique words data2:", len(words2))
 
