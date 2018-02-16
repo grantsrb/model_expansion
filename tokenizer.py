@@ -1,3 +1,16 @@
+def tokenize(string):
+    spaced_string = ""
+    for i,char in enumerate(string):
+        if char.isalnum() or char == " ":
+            spaced_string += char
+        else:
+            if spaced_string[-1] != " ":
+                spaced_string += " "
+            spaced_string += char
+            if i+1 < len(string) and not string[i+1].isspace():
+                spaced_string += " "
+    return spaced_string.split(" ")
+
 def split_token(token):
     """
     Splits a string into an array that contains newline tokens
